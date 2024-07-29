@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload and Process Excel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>Upload Excel File</h1>
+    <input type="file" id="fileInput" />
+    <button onclick="processFile()">Upload and Process</button>
+    <div id="output"></div>
+
+    <script>
+        function processFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const addresses = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+                    .map(row => row[8]) // Assuming column I is the 9th column (index 8)
+                    .filter(address => address); // Filter out empty addresses
+
+                displayAddresses(addresses);
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayAddresses(addresses) {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            addresses.forEach(address => {
+                const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+                const linkElement = document.createElement('a');
+                linkElement.href = mapLink;
+                linkElement.target = '_blank';
+                linkElement.textContent = address;
+                output.appendChild(linkElement);
+                output.appendChild(document.createElement('br'));
+            });
+        }
+    </script>
+</body>
+</html>
