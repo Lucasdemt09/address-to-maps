@@ -3,16 +3,34 @@
 <head>
     <title>Upload and Process Excel</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #fileInput, #priceInput, button {
+            margin-top: 10px;
+        }
+        #priceFilter {
+            margin-top: 20px;
+        }
+        #output a {
+            display: block;
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
     <h1>Upload Excel File</h1>
     <input type="file" id="fileInput" />
     <button onclick="processFile()">Upload and Process</button>
 
-    <div id="priceFilter" style="display:none; margin-top: 20px;">
-        <label for="priceRange">Filter by Price: </label>
-        <input type="range" id="priceRange" min="0" max="1000000" step="1000" value="1000000" oninput="updatePriceDisplay()">
-        <span id="priceDisplay">1000000</span>
+    <div id="priceFilter" style="display:none;">
+        <label for="priceInput">Filter by Price (<=): </label>
+        <input type="number" id="priceInput" value="1000000" oninput="updatePriceDisplay()">
     </div>
 
     <div id="output" style="margin-top: 20px;"></div>
@@ -38,13 +56,6 @@
                 if (addresses.length > 0) {
                     // Show price filter
                     document.getElementById('priceFilter').style.display = 'block';
-
-                    // Update max value of slider
-                    const maxPrice = Math.max(...addresses.map(row => row.price));
-                    document.getElementById('priceRange').max = maxPrice;
-                    document.getElementById('priceRange').value = maxPrice;
-                    updatePriceDisplay();
-
                     displayAddresses();
                 } else {
                     alert('No valid addresses or prices found in the file.');
@@ -58,7 +69,7 @@
             const output = document.getElementById('output');
             output.innerHTML = '';
 
-            const maxPrice = parseFloat(document.getElementById('priceRange').value);
+            const maxPrice = parseFloat(document.getElementById('priceInput').value);
 
             addresses.filter(row => row.price <= maxPrice).forEach(row => {
                 const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.address)}`;
@@ -67,13 +78,10 @@
                 linkElement.target = '_blank';
                 linkElement.textContent = `${row.address} - $${row.price}`;
                 output.appendChild(linkElement);
-                output.appendChild(document.createElement('br'));
             });
         }
 
         function updatePriceDisplay() {
-            const price = document.getElementById('priceRange').value;
-            document.getElementById('priceDisplay').textContent = price;
             displayAddresses();
         }
     </script>
