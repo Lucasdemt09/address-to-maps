@@ -11,10 +11,10 @@
         h1 {
             color: #333;
         }
-        #fileInput, #priceInput, button {
+        #fileInput, #purchaseAmountMinInput, #purchaseAmountMaxInput, #assessedValueMinInput, #assessedValueMaxInput, button {
             margin-top: 10px;
         }
-        #priceFilter {
+        #filters {
             margin-top: 20px;
         }
         #output a {
@@ -28,15 +28,48 @@
     <input type="file" id="fileInput" />
     <button onclick="processFile()">Upload and Process</button>
 
-    <div id="priceFilter" style="display:none;">
-        <label for="priceInput">Filter by Price (<=): </label>
-        <input type="number" id="priceInput" value="1000000" oninput="updatePriceDisplay()">
+    <div id="filters" style="display:none;">
+        <div>
+            <label for="taxYearInput">Tax Year: </label>
+            <input type="number" id="taxYearInput" oninput="updateDisplay()">
+        </div>
+        <div>
+            <label for="expirationDateInput">Expiration Date: </label>
+            <input type="date" id="expirationDateInput" oninput="updateDisplay()">
+        </div>
+        <div>
+            <label for="purchaseAmountMinInput">Minimum Purchase Amount (>=): </label>
+            <input type="number" id="purchaseAmountMinInput" value="0" oninput="updateDisplay()">
+        </div>
+        <div>
+            <label for="purchaseAmountMaxInput">Maximum Purchase Amount (<=): </label>
+            <input type="number" id="purchaseAmountMaxInput" value="1000000" oninput="updateDisplay()">
+        </div>
+        <div>
+            <label for="certYearInput">Certificate Year: </label>
+            <input type="number" id="certYearInput" oninput="updateDisplay()">
+        </div>
+        <div>
+            <label for="ownerInput">Owner: </label>
+            <input type="text" id="ownerInput" oninput="updateDisplay()">
+        </div>
+        <div>
+            <label for="assessedValueMinInput">Minimum Assessed Value (>=): </label>
+            <input type="number" id="assessedValueMinInput" value="0" oninput="updateDisplay()">
+        </div>
+        <div>
+            <label for="assessedValueMaxInput">Maximum Assessed Value (<=): </label>
+            <input type="number" id="assessedValueMaxInput" value="1000000" oninput="updateDisplay()">
+        </div>
+        <button onclick="sortAddresses('asc')">Sort Purchase Amount Low to High</button>
+        <button onclick="sortAddresses('desc')">Sort Purchase Amount High to Low</button>
     </div>
 
     <div id="output" style="margin-top: 20px;"></div>
 
     <script>
-        let addresses = [];
+        let properties = [];
+        let sortOrder = 'asc';
 
         function processFile() {
             const fileInput = document.getElementById('fileInput');
@@ -49,40 +82,76 @@
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                 
-                addresses = rows
-                    .map(row => ({ address: row[8], price: parseFloat(row[4]) })) // Assuming column E is the 5th column (index 4)
-                    .filter(row => row.address && !isNaN(row.price)); // Filter out rows with empty address or invalid price
+                properties = rows.map(row => ({
+                    account: row[0], // Account #
+                    taxYear: row[1], // Tax Year
+                    certNumber: row[2], // Certificate #
+                    expirationDate: row[3], // Expiration Date
+                    purchaseAmount: parseFloat(row[4]), // Purchase Amount
+                    certYear: row[5], // Cert Year
+                    advNumber: row[6], // Adv #
+                    owner: row[7], // Owner
+                    address: row[8], // Property Address
+                    legal: row[9], // Legal
+                    assessedValue: parseFloat(row[10]), // Assessed Value
+                    certsIssued: row[11], // Certs Issued
+                    certsRedeemed: row[12], // Certs Redeemed
+                    certsOutstanding: row[13] // Certs Outstanding
+                })).filter(row => row.address && !isNaN(row.purchaseAmount) && !isNaN(row.assessedValue)); // Filter out rows with empty address or invalid amounts
 
-                if (addresses.length > 0) {
-                    // Show price filter
-                    document.getElementById('priceFilter').style.display = 'block';
-                    displayAddresses();
+                if (properties.length > 0) {
+                    // Show filters and sorting buttons
+                    document.getElementById('filters').style.display = 'block';
+                    displayProperties();
                 } else {
-                    alert('No valid addresses or prices found in the file.');
+                    alert('No valid properties found in the file.');
                 }
             };
 
             reader.readAsArrayBuffer(file);
         }
 
-        function displayAddresses() {
+        function displayProperties() {
             const output = document.getElementById('output');
             output.innerHTML = '';
 
-            const maxPrice = parseFloat(document.getElementById('priceInput').value);
+            const taxYear = document.getElementById('taxYearInput').value;
+            const expirationDate = document.getElementById('expirationDateInput').value;
+            const minPurchaseAmount = parseFloat(document.getElementById('purchaseAmountMinInput').value);
+            const maxPurchaseAmount = parseFloat(document.getElementById('purchaseAmountMaxInput').value);
+            const certYear = document.getElementById('certYearInput').value;
+            const owner = document.getElementById('ownerInput').value.toLowerCase();
+            const minAssessedValue = parseFloat(document.getElementById('assessedValueMinInput').value);
+            const maxAssessedValue = parseFloat(document.getElementById('assessedValueMaxInput').value);
 
-            addresses.filter(row => row.price <= maxPrice).forEach(row => {
+            const filteredProperties = properties.filter(row => 
+                (!taxYear || row.taxYear == taxYear) &&
+                (!expirationDate || row.expirationDate == expirationDate) &&
+                row.purchaseAmount >= minPurchaseAmount &&
+                row.purchaseAmount <= maxPurchaseAmount &&
+                (!certYear || row.certYear == certYear) &&
+                (!owner || row.owner.toLowerCase().includes(owner)) &&
+                row.assessedValue >= minAssessedValue &&
+                row.assessedValue <= maxAssessedValue
+            ).sort((a, b) => sortOrder === 'asc' ? a.purchaseAmount - b.purchaseAmount : b.purchaseAmount - a.purchaseAmount);
+
+            filteredProperties.forEach(row => {
                 const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.address)}`;
                 const linkElement = document.createElement('a');
                 linkElement.href = mapLink;
                 linkElement.target = '_blank';
-                linkElement.textContent = `${row.address} - $${row.price}`;
+                linkElement.textContent = `${row.address} - $${row.purchaseAmount}`;
                 output.appendChild(linkElement);
             });
         }
 
-        function updatePriceDisplay() {
-            displayAddresses();
+        function updateDisplay() {
+            displayProperties();
+        }
+
+        function sortAddresses(order) {
+            sortOrder = order;
+            displayProperties();
         }
     </script>
 </body>
