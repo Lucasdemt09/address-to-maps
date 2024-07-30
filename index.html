@@ -9,13 +9,13 @@
     <input type="file" id="fileInput" />
     <button onclick="processFile()">Upload and Process</button>
 
-    <div id="priceFilter" style="display:none;">
+    <div id="priceFilter" style="display:none; margin-top: 20px;">
         <label for="priceRange">Filter by Price: </label>
         <input type="range" id="priceRange" min="0" max="1000000" step="1000" value="1000000" oninput="updatePriceDisplay()">
         <span id="priceDisplay">1000000</span>
     </div>
 
-    <div id="output"></div>
+    <div id="output" style="margin-top: 20px;"></div>
 
     <script>
         let addresses = [];
@@ -32,19 +32,23 @@
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                 
                 addresses = rows
-                    .map(row => ({ address: row[8], price: row[4] })) // Assuming column E is the 5th column (index 4)
-                    .filter(row => row.address && row.price); // Filter out rows with empty address or price
+                    .map(row => ({ address: row[8], price: parseFloat(row[4]) })) // Assuming column E is the 5th column (index 4)
+                    .filter(row => row.address && !isNaN(row.price)); // Filter out rows with empty address or invalid price
 
-                // Show price filter
-                document.getElementById('priceFilter').style.display = 'block';
+                if (addresses.length > 0) {
+                    // Show price filter
+                    document.getElementById('priceFilter').style.display = 'block';
 
-                // Update max value of slider
-                const maxPrice = Math.max(...addresses.map(row => row.price));
-                document.getElementById('priceRange').max = maxPrice;
-                document.getElementById('priceRange').value = maxPrice;
-                updatePriceDisplay();
+                    // Update max value of slider
+                    const maxPrice = Math.max(...addresses.map(row => row.price));
+                    document.getElementById('priceRange').max = maxPrice;
+                    document.getElementById('priceRange').value = maxPrice;
+                    updatePriceDisplay();
 
-                displayAddresses();
+                    displayAddresses();
+                } else {
+                    alert('No valid addresses or prices found in the file.');
+                }
             };
 
             reader.readAsArrayBuffer(file);
